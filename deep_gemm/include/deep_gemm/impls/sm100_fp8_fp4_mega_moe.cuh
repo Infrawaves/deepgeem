@@ -776,7 +776,7 @@ sm100_fp8_fp4_mega_moe_impl(void* y,
             for (uint32_t i = 0; i < math::constexpr_ceil_div(kNumSFUint32, 32u); ++ i) {
                 const uint32_t j = i * 32 + lane_idx;
                 if (j < kNumSFUint32)
-                    local_sf_ptr[j * kNumSFRingTokens + sf_ring_token_idx] = remote_sf_ptr[j];
+                    local_sf_ptr[static_cast<uint64_t>(j) * kNumSFRingTokens + sf_ring_token_idx] = remote_sf_ptr[j];
             }
             __syncwarp();
 
@@ -1567,7 +1567,7 @@ sm100_fp8_fp4_mega_moe_impl(void* y,
                             const uint32_t k_idx = kIsNVFP4 ? n_block_idx * 4 + warp_idx_in_wg
                                                             : n_block_idx * 2 + warp_idx_in_wg / 2;
                             const uint32_t k_uint_idx = k_idx / 4, byte_idx = k_idx % 4;
-                            const uint32_t mn_stride = (task_info.is_shared() ? kNumSharedSFTokens : kNumSFRingTokens) * sizeof(uint32_t);
+                            const uint64_t mn_stride = static_cast<uint64_t>(task_info.is_shared() ? kNumSharedSFTokens : kNumSFRingTokens) * sizeof(uint32_t);
                             const auto sf_base_ptr = task_info.is_shared() ?
                                 buffer.shared_l2_sf_buffer.get_base_ptr<uint8_t>() : buffer.l2_sf_buffer.get_base_ptr<uint8_t>();
                             // NOTES: consecutive tokens (t, t + 1) are in the same 32-group, so `sf_idx` differs by 4
@@ -1582,7 +1582,7 @@ sm100_fp8_fp4_mega_moe_impl(void* y,
                             __builtin_assume(token_base_idx < BLOCK_M);
                             const auto sf_token_idx = block_idx * SF_BLOCK_M
                                 + transform_sf_token_idx(token_base_idx) + (lane_idx * 2) * 4;
-                            const auto sf_addr = k_uint_idx * mn_stride + sf_token_idx * static_cast<uint32_t>(sizeof(uint32_t)) + byte_idx;
+                            const auto sf_addr = k_uint_idx * mn_stride + static_cast<uint64_t>(sf_token_idx) * sizeof(uint32_t) + byte_idx;
                             sf_base_ptr[sf_addr] = static_cast<uint8_t>(sf_bits.x);
                             sf_base_ptr[sf_addr + 4 * static_cast<uint32_t>(sizeof(uint32_t))] =
                                 static_cast<uint8_t>(sf_bits.y);
